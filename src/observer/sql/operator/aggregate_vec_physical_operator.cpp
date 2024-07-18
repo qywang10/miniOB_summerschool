@@ -101,10 +101,21 @@ void AggregateVecPhysicalOperator::update_aggregate_state(void *state, const Col
 RC AggregateVecPhysicalOperator::next(Chunk &chunk)
 {
 
-    // your code here
-  //exit(-1);
+  auto *aggregate_expr = static_cast<AggregateExpr *>(aggregate_expressions_[0]);
+  Column *col = chunk.column_ptr(0);
+  if (aggregate_expr->aggregate_type() == AggregateExpr::Type::SUM) {
+    if (aggregate_expr->value_type() == AttrType::INTS) {
+      append_to_column<SumState<int>, int>(aggr_values_.at(0), *col);
+    } else if (aggregate_expr->value_type() == AttrType::FLOATS) {
+      append_to_column<SumState<float>, float>(aggr_values_.at(0), *col);
+    } else {
+      ASSERT(false, "not supported value type");
+    }
+  }
   return RC::SUCCESS;
 
+    // your code here
+  //exit(-1);
 }
 
 RC AggregateVecPhysicalOperator::close()
