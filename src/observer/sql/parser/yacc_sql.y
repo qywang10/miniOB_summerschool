@@ -530,7 +530,7 @@ expression:
     | '*' {
       $$ = new StarExpr();
     }
-    SUM LBRACE expression RBRACE{
+    | SUM LBRACE expression RBRACE{
             $$ = new UnboundAggregateExpr("SUM", $3);
         }
     // your code here
