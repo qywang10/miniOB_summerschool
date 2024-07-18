@@ -101,7 +101,43 @@ void AggregateVecPhysicalOperator::update_aggregate_state(void *state, const Col
 RC AggregateVecPhysicalOperator::next(Chunk &chunk)
 {
   // your code here
-  exit(-1);
+  RC rc = RC::SUCCESS;
+  if (children_.empty()) {
+    return RC::RECORD_EOF;
+  }
+  int chunk_len = chunk.column_num();
+  std::vector<int *> vector_[chunk_len];// aggr_values_.data_ resize
+  std::vector<float *> vector_f[chunk_len];
+  int cur_col_id;
+  int cur_row_num = chunk.rows();
+  Value cur_val;
+
+  rc = children_[0]->next(chunk_);
+  if (rc == RC::RECORD_EOF) {
+    return rc;
+  } else if (rc == RC::SUCCESS) {
+    for(int i=0;i<chunk_len;i++){
+        cur_col_id=chunk.column_ids(i);
+        int agg_sum = 0;
+        float agg_sum_f = 0.0;
+        for(int j=0;j<cur_row_num;j++){
+          cur_val = chunk.get_value(cur_col_id,j); //get_value(int col_idx, int row_idx)
+          if(cur_val.attr_type() == AttrType::INTS){
+            agg_sum=agg_sum+cur_val.get_int();
+            aggr_values_.insert((int*)&agg_sum);
+          }else if(cur_val.attr_type() == AttrType::FLOATS){
+            agg_sum_f=agg_sum_f+cur_val.get_float();
+            aggr_values_.insert((float*)&agg_sum_f);
+          }else{
+            ASSERT(false, "not supported value type");
+          }
+        }
+    }
+  } else {
+    LOG_WARN("failed to get next tuple: %s", strrc(rc));
+    return rc;
+  }
+  return rc;
 }
 
 RC AggregateVecPhysicalOperator::close()
