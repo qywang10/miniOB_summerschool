@@ -14,8 +14,35 @@ See the Mulan PSL v2 for more details. */
 
 RC StandardAggregateHashTable::add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk)
 {
-  // your code here
-  exit(-1);
+  for(int i = 0;i < groups_chunk.rows();i ++) {
+    std::vector<Value> group_vals, aggrs_vals;
+    for(int j = 0;j < groups_chunk.column_num();j ++) {
+      group_vals.push_back(groups_chunk.get_value(j, i));
+    }
+    for(int j = 0;j < aggrs_chunk.column_num();j ++) {
+      // std::cout << aggrs_chunk.column_num() << " " << aggrs_chunk.rows() << " " << j << " " << i << std::endl;
+      aggrs_vals.push_back(aggrs_chunk.get_value(j, i));
+    }
+
+    // do aggregation
+    if(aggr_values_.count(group_vals) != 0) {
+      // aggregate the aggrs_vals here
+      for (size_t aggr_idx = 0; aggr_idx < aggrs_chunk.column_num(); aggr_idx++) {
+        if(aggr_values_[group_vals].at(aggr_idx).attr_type() == AttrType::INTS) {
+          int old_val = aggr_values_[group_vals].at(aggr_idx).get_int();
+          // std::cout << "old val: " << old_val << " " << aggrs_vals[aggr_idx].get_float() << std::endl;
+          aggr_values_[group_vals].at(aggr_idx).set_int(aggrs_vals[aggr_idx].get_int() + old_val);
+        } else if(aggr_values_[group_vals].at(aggr_idx).attr_type() == AttrType::FLOATS) {
+          float old_val = aggr_values_[group_vals].at(aggr_idx).get_float();
+          // std::cout << "old val: " << old_val << " " << aggrs_vals[aggr_idx].get_float() << std::endl;
+          aggr_values_[group_vals].at(aggr_idx).set_float(aggrs_vals[aggr_idx].get_float() + old_val);
+        }
+      }
+    } else {
+      aggr_values_[group_vals] = aggrs_vals;
+    }
+  }
+  return RC::SUCCESS;
 }
 
 void StandardAggregateHashTable::Scanner::open_scan()
@@ -233,7 +260,117 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
   // }
   //7. 通过标量线性探测，处理剩余键值对
 
-  // resize_if_need();
+  int inv[SIMD_WIDTH];
+  int off[SIMD_WIDTH];
+  memset(inv, -1, sizeof(inv)); // Initialize inv to -1
+  memset(off, 0, sizeof(off));  // Initialize off to 0
+
+  std::cout << "cap " << capacity_ << std::endl;
+
+  int i = 0;
+  __m256i keys = _mm256_setzero_si256();
+  __m256i values = _mm256_setzero_si256();
+  __m256i hash_vals = _mm256_setzero_si256();
+  __m256i table_keys;
+
+  while (i + SIMD_WIDTH <= len) {
+      for (int j = 0; j < SIMD_WIDTH; ++j) {
+          if (inv[j] == -1 && i < len) {
+              std::cout << "insert pos " << j << " key: " << input_keys[i] << std::endl;
+              keys = insert_value(keys, input_keys[i], j);
+              values = insert_value(values, input_values[i], j);
+              inv[j] = 0;
+              ++i;
+          }
+      }
+
+      // Calculate hash values
+
+      for (int j = 0; j < SIMD_WIDTH; ++j) {
+        if(inv[j] != -1) {
+          int key = mm256_extract_epi32_var_indx(keys, j);
+          int hash_val = hash_function(key + off[j]);
+          std::cout << "cal hash vals, pos: " << j << " key: " << key << " hash val: " << hash_val << std::endl;
+          hash_vals = insert_value(hash_vals, hash_val, j);
+        }
+      }
+
+      // aggregate
+      for (int j = 0; j < SIMD_WIDTH; ++j) {
+          if(inv[j] == -1) continue;
+          int key = mm256_extract_epi32_var_indx(keys, j);
+          int hash_val = hash_function(key + off[j]);
+
+          if (keys_[hash_val] == key) {
+              values_[hash_val] += mm256_extract_epi32_var_indx(values, j);
+              inv[j] = -1; // Mark as done
+              off[j] = 0;
+          }
+      }
+
+      // Gather operation
+      table_keys = _mm256_i32gather_epi32(keys_.data(), hash_vals, 4);
+
+      for (int j = 0; j < SIMD_WIDTH; ++j) {
+          if(inv[j] == -1) continue;
+          int key = mm256_extract_epi32_var_indx(keys, j);
+          int table_key = mm256_extract_epi32_var_indx(table_keys, j);
+          int hash_val = mm256_extract_epi32_var_indx(hash_vals, j);
+
+          if(table_key == EMPTY_KEY) {
+              if(keys_[hash_val] != EMPTY_KEY && keys_[hash_val] != key) {
+                off[j]++;
+              } else if(keys_[hash_val] != EMPTY_KEY && keys_[hash_val] == key) {
+                values_[hash_val] += mm256_extract_epi32_var_indx(values, j);
+                inv[j] = -1; // Mark as done
+                off[j] = 0;
+              } else {
+                // std::cout << "key " << key << "insert into empty " << hash_val << std::endl;
+                keys_[hash_val] = key;
+                values_[hash_val] = mm256_extract_epi32_var_indx(values, j);
+                inv[j] = -1; // Mark as done
+                off[j] = 0;
+                size_++;
+              }
+          } else {
+              off[j]++;
+          }
+      }
+  }
+
+  for (int j = 0; j < SIMD_WIDTH; ++j) {
+      if(inv[j] == -1) continue;
+      int key = mm256_extract_epi32_var_indx(keys, j);
+      int hash_val = hash_function(key + off[j]);
+
+      if (keys_[hash_val] == key) {
+          values_[hash_val] += mm256_extract_epi32_var_indx(values, j);
+          inv[j] = -1; // Mark as done
+          off[j] = 0;
+      }
+  }
+
+  // Process remaining elements
+  while (i < len) {
+      int key = input_keys[i];
+      V value = input_values[i];
+      int hash_val = hash_function(key);
+
+      while (keys_[hash_val] != key && keys_[hash_val] != EMPTY_KEY) {
+          hash_val = (hash_val + 1) % capacity_;
+      }
+
+      if (keys_[hash_val] == key) {
+          values_[hash_val] += value;
+      } else {
+          keys_[hash_val] = key;
+          values_[hash_val] = value;
+          size_++;
+      }
+      ++i;
+  }
+
+  resize_if_need();
 }
 
 template <typename V>
