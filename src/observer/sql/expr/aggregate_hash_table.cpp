@@ -278,8 +278,9 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
     key=input_keys[i];
     index = (key % capacity_ + capacity_) % capacity_;
     while(flag==false){
-      // key=input_keys[i];
-      // index = (key % capacity_ + capacity_) % capacity_;
+      if(key==EMPTY_KEY){
+        size_++;
+      }
       if(inv[i]==-1){
         input_values[i]=input_keys[i];
         inv[i]=0;
