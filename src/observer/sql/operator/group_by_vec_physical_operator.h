@@ -12,12 +12,6 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/expr/aggregate_hash_table.h"
 #include "sql/operator/physical_operator.h"
-#include <algorithm>
-#include "common/log/log.h"
-#include "sql/expr/aggregate_state.h"
-
-using namespace std;
-using namespace common;
 /**
  * @brief Group By 物理算子(vectorized)
  * @ingroup PhysicalOperator
@@ -28,15 +22,15 @@ public:
   GroupByVecPhysicalOperator(
       std::vector<std::unique_ptr<Expression>> &&group_by_exprs, std::vector<Expression *> &&expressions)
       : group_by_exprs_(std::move(group_by_exprs)), ht_(expressions) {
-    aggregate_expressions_ = expressions;
-    value_expressions_.reserve(aggregate_expressions_.size());
-    for(auto expr : aggregate_expressions_) {
-      auto       *aggregate_expr = static_cast<AggregateExpr *>(expr);
-      Expression *child_expr     = aggregate_expr->child().get();
-      ASSERT(child_expr != nullptr, "aggregate expression must have a child expression");
-      value_expressions_.emplace_back(child_expr);
-    }
-  };
+        aggregate_expressions_ = expressions;
+        value_expressions_.reserve(aggregate_expressions_.size());
+        for(auto expr : aggregate_expressions_) {
+          auto       *aggregate_expr = static_cast<AggregateExpr *>(expr);
+          Expression *child_expr     = aggregate_expr->child().get();
+          ASSERT(child_expr != nullptr, "aggregate expression must have a child expression");
+          value_expressions_.emplace_back(child_expr);
+        }
+      };
 
   virtual ~GroupByVecPhysicalOperator() = default;
 
