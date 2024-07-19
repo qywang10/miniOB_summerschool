@@ -100,19 +100,43 @@ void AggregateVecPhysicalOperator::update_aggregate_state(void *state, const Col
 
 RC AggregateVecPhysicalOperator::next(Chunk &chunk)
 {
-  RC rc = RC::SUCCESS;
-  ASSERT(children_.size() == 1, "group by operator only support one child, but got %d", children_.size());
+//  RC rc = RC::SUCCESS;
+//  ASSERT(children_.size() == 1, "group by operator only support one child, but got %d", children_.size());
+//
+//  //PhysicalOperator &child = *children_[0];
+//  chunk.reset();
+//  for (size_t i = 0; i < aggregate_expressions_.size(); i++) {
+//    auto &expr = aggregate_expressions_[i];
+//    ASSERT(expr->type() == ExprType::AGGREGATION, "expected an aggregation expression");
+//    auto *aggregate_expr = static_cast<AggregateExpr *>(expr);
+//    if (aggregate_expr->aggregate_type() == AggregateExpr::Type::SUM) {
+//      if (aggregate_expr->value_type() == AttrType::INTS) {
+//        void *aggr_value                     = malloc(sizeof(SumState<int>));
+//        ((SumState<int> *)aggr_value)->value = 0;
+//        aggr_values_.insert(aggr_value);
+//        chunk.add_column(make_unique<Column>(AttrType::INTS, sizeof(int)), i);
+//      } else if (aggregate_expr->value_type() == AttrType::FLOATS) {
+//        void *aggr_value                       = malloc(sizeof(SumState<float>));
+//        ((SumState<float> *)aggr_value)->value = 0;
+//        aggr_values_.insert(aggr_value);
+//        chunk.add_column(make_unique<Column>(AttrType::FLOATS, sizeof(float)), i);
+//      }
+//    } else {
+//      ASSERT(false, "not supported aggregation type");
+//    }
+//  }
 
-  PhysicalOperator &child = *children_[0];
-  chunk.reset();
-  if (OB_SUCC(rc = child.next(chunk_))) {
-    for (size_t i = 0; i < aggregate_expressions_.size(); i++) {
-      auto column = std::make_unique<Column>();
-      aggregate_expressions_[i]->get_column(chunk_, *column);
-      output_chunk_.add_column(std::move(column), i);
-    }
-    chunk.reference(output_chunk_);
+  if (emited_) {
+    return RC::RECORD_EOF;
   }
+  emited_ = true;
+  RC rc = RC::SUCCESS;
+  output_chunk_.reset_data();
+  for (int i = 0; i < output_chunk_.column_num(); i++) {
+    output_chunk_.column(i).append_one((char *)aggr_values_.at(i));
+  }
+  chunk.reference(output_chunk_);
+
   return rc;
 
     // your code here
