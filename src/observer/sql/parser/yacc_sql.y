@@ -104,6 +104,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         INFILE
         EXPLAIN
         STORAGE
+        SUM
         FORMAT
         EQ
         LT
