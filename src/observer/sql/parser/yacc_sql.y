@@ -64,7 +64,8 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
 %parse-param { void * scanner }
 
 //标识tokens
-%token  SEMICOLON
+%token  SUM
+        SEMICOLON
         BY
         CREATE
         DROP
@@ -104,7 +105,6 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         INFILE
         EXPLAIN
         STORAGE
-        SUM
         FORMAT
         EQ
         LT
