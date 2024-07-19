@@ -99,17 +99,37 @@ void AggregateVecPhysicalOperator::update_aggregate_state(void *state, const Col
 }
 
 RC AggregateVecPhysicalOperator::next(Chunk &chunk){
-  if (ended_) {
-    return RC::RECORD_EOF;
-  }
-  ended_ = true;
-  RC rc = RC::SUCCESS;
-  output_chunk_.reset_data();
-  for (int i = 0; i < output_chunk_.column_num(); i++) {
-    output_chunk_.column(i).append_one((char *)aggr_values_.at(i));
-  }
-  chunk.reference(output_chunk_);
+//  if (ended_) {
+//    return RC::RECORD_EOF;
+//  }
+//  ended_ = true;
+//  RC rc = RC::SUCCESS;
+//  output_chunk_.reset_data();
+//  for (int i = 0; i < output_chunk_.column_num(); i++) {
+//    output_chunk_.column(i).append_one((char *)aggr_values_.at(i));
+//  }
+//  chunk.reference(output_chunk_);
 
+if(ended_) {
+  return RC::RECORD_EOF;
+}
+RC rc = RC::SUCCESS;
+for (size_t aggr_idx = 0; aggr_idx < aggregate_expressions_.size(); aggr_idx++) {
+  auto *aggregate_expr = static_cast<AggregateExpr *>(aggregate_expressions_[aggr_idx]);
+  if (aggregate_expr->aggregate_type() == AggregateExpr::Type::SUM) {
+    if (aggregate_expr->value_type() == AttrType::INTS) {
+      chunk.add_column(make_unique<Column>(AttrType::INTS, sizeof(int)), aggr_idx);
+      chunk.column_ptr(aggr_idx)->append_one((char *)aggr_values_.at(aggr_idx));
+    } else if (aggregate_expr->value_type() == AttrType::FLOATS) {
+      chunk.add_column(make_unique<Column>(AttrType::FLOATS, sizeof(float)), aggr_idx);
+      chunk.column_ptr(aggr_idx)->append_one((char *)aggr_values_.at(aggr_idx));
+    }
+  }
+}
+if(rc == RC::SUCCESS) {
+  ended_ = true;
+  return RC::SUCCESS;
+}
   return rc;
 return rc;
 // your code here
