@@ -100,19 +100,20 @@ void AggregateVecPhysicalOperator::update_aggregate_state(void *state, const Col
 
 RC AggregateVecPhysicalOperator::next(Chunk &chunk)
 {
+  RC rc = RC::SUCCESS;
+  ASSERT(children_.size() == 1, "group by operator only support one child, but got %d", children_.size());
 
-  auto *aggregate_expr = static_cast<AggregateExpr *>(aggregate_expressions_[0]);
-  Column *col = chunk.column_ptr(0);
-  if (aggregate_expr->aggregate_type() == AggregateExpr::Type::SUM) {
-    if (aggregate_expr->value_type() == AttrType::INTS) {
-      append_to_column<SumState<int>, int>(aggr_values_.at(0), *col);
-    } else if (aggregate_expr->value_type() == AttrType::FLOATS) {
-      append_to_column<SumState<float>, float>(aggr_values_.at(0), *col);
-    } else {
-      ASSERT(false, "not supported value type");
+  PhysicalOperator &child = *children_[0];
+  chunk.reset();
+  if (OB_SUCC(rc = child.next(chunk_))) {
+    for (size_t i = 0; i < aggregate_expressions_.size(); i++) {
+      auto column = std::make_unique<Column>();
+      aggregate_expressions_[i]->get_column(chunk_, *column);
+      output_chunk_.add_column(std::move(column), i);
     }
+    chunk.reference(output_chunk_);
   }
-  return RC::SUCCESS;
+  return rc;
 
     // your code here
   //exit(-1);
