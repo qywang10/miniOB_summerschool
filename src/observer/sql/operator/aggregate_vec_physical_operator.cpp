@@ -51,6 +51,7 @@ AggregateVecPhysicalOperator::AggregateVecPhysicalOperator(vector<Expression *> 
       ASSERT(false, "not supported aggregation type");
     }
   }
+  ended_= false;
 }
 
 RC AggregateVecPhysicalOperator::open(Trx *trx)
