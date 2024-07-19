@@ -129,15 +129,15 @@ bool StandardAggregateHashTable::VectorEqual::operator()(const vector<Value> &lh
 template <typename V>
 RC LinearProbingAggregateHashTable<V>::add_chunk(Chunk &group_chunk, Chunk &aggr_chunk)
 {
-  if (group_chunk.column_num() != 1 || aggr_chunk.column_num() != 1) {
-    LOG_WARN("group_chunk and aggr_chunk size must be 1.");
-    return RC::INVALID_ARGUMENT;
-  }
-  if (group_chunk.rows() != aggr_chunk.rows()) {
-    LOG_WARN("group_chunk and aggr _chunk rows must be equal.");
-    return RC::INVALID_ARGUMENT;
-  }
-  add_batch((int *)group_chunk.column(0).data(), (V *)aggr_chunk.column(0).data(), group_chunk.rows());
+  // if (group_chunk.column_num() != 1 || aggr_chunk.column_num() != 1) {
+  //   LOG_WARN("group_chunk and aggr_chunk size must be 1.");
+  //   return RC::INVALID_ARGUMENT;
+  // }
+  // if (group_chunk.rows() != aggr_chunk.rows()) {
+  //   LOG_WARN("group_chunk and aggr _chunk rows must be equal.");
+  //   return RC::INVALID_ARGUMENT;
+  // }
+  // add_batch((int *)group_chunk.column(0).data(), (V *)aggr_chunk.column(0).data(), group_chunk.rows());
   return RC::SUCCESS;
 }
 
