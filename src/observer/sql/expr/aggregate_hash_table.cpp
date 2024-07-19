@@ -266,35 +266,39 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
 {
   // your code here
   int key,index;
+  V value;
   bool flag=false;
-  int inv[len];
+  int inv[];
   memset(inv,0xff,sizeof(int)*len);
-  // if(len<capacity_){
-  //   resize_if_need();
-  //   return;
-  // }
 
   for(int i=0;i<len;i++){   // 
     key=input_keys[i];
+    value=input_values[i];
     index = (key % capacity_ + capacity_) % capacity_;
+
     while(flag==false){
-      if(key==EMPTY_KEY){
-        size_++;
+      if(key==EMPTY_KEY){    // not exist
+        break;
       }
-      if(inv[i]==-1){
-        input_values[i]=input_keys[i];
+
+      if(inv[index]==-1){
+        // input_values[i]=input_keys[i];
+        keys_[index]=key;
+        values_[index]=value;
         inv[i]=0;
         flag=true;
       }else{
         index += 1;
         index %= capacity_;
         if(index < len){
-          input_values[i]=input_keys[i];
+          keys_[index]=key;
+          values_[index]=value;
           inv[i]=0;
           flag=true;
         }
       }
     }
+    
   }
   resize_if_need();
   // inv (invalid) 表示是否有效，inv[i] = -1 表示有效，inv[i] = 0 表示无效。
