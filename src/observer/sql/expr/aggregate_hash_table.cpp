@@ -265,16 +265,21 @@ template <typename V>
 void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_values, int len)
 {
   // your code here
-  //exit(-1);
   int key,index;
   bool flag=false;
   int *inv;
   memset(inv,0xff,sizeof(int)*len);
+  // if(len<capacity_){
+  //   resize_if_need();
+  //   return;
+  // }
 
   for(int i=0;i<len;i++){   // 
     key=input_keys[i];
     index = (key % capacity_ + capacity_) % capacity_;
     while(flag==false){
+      // key=input_keys[i];
+      // index = (key % capacity_ + capacity_) % capacity_;
       if(inv[i]==-1){
         input_values[i]=input_keys[i];
         inv[i]=0;
@@ -282,9 +287,15 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
       }else{
         index += 1;
         index %= capacity_;
+        if(index < len){
+          input_values[i]=input_keys[i];
+          inv[i]=0;
+          flag=true;
+        }
       }
     }
   }
+  resize_if_need();
   // inv (invalid) 表示是否有效，inv[i] = -1 表示有效，inv[i] = 0 表示无效。
   // key[SIMD_WIDTH],value[SIMD_WIDTH] 表示当前循环中处理的键值对。
   // off (offset) 表示线性探测冲突时的偏移量，key[i] 每次遇到冲突键，则off[i]++，如果key[i] 已经完成聚合，则off[i] = 0，
@@ -304,7 +315,7 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
   // }
   //7. 通过标量线性探测，处理剩余键值对
 
-  // resize_if_need();
+  //resize_if_need();
 }
 
 template <typename V>
