@@ -265,7 +265,26 @@ template <typename V>
 void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_values, int len)
 {
   // your code here
-  exit(-1);
+  //exit(-1);
+  int key,index;
+  bool flag=flase;
+  int *inv;
+  memset(inv,0xff,sizeof(int)*len);
+
+  for(int i=0;i<len;i++){   
+    key=input_keys[i];
+    index = (key % capacity_ + capacity_) % capacity_;
+    while(flag==flase){
+      if(inv[i]==-1){
+        input_values[i]=input_keys[i];
+        inv[i]=0;
+        flag=true;
+      }else{
+        index += 1;
+        index %= capacity_;
+      }
+    }
+  }
 
   // inv (invalid) 表示是否有效，inv[i] = -1 表示有效，inv[i] = 0 表示无效。
   // key[SIMD_WIDTH],value[SIMD_WIDTH] 表示当前循环中处理的键值对。
