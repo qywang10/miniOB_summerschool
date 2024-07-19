@@ -12,10 +12,63 @@ See the Mulan PSL v2 for more details. */
 
 // ----------------------------------StandardAggregateHashTable------------------
 
+RC StandardAggregateHashTable::sub_aggregate(std::vector<Value> &values, std::vector<Value> &values_to_aggregate)
+{
+  for (size_t i = 0; i < values.size(); i++) {
+    if (aggr_types_[i] == AggregateExpr::Type::SUM) {
+      if (values[i].attr_type() == AttrType::INTS) {
+        int value = values[i].get_int();
+        value += values_to_aggregate[i].get_int();
+        values[i].set_int(value);
+      } else if (values[i].attr_type() == AttrType::FLOATS) {
+        float value = values[i].get_float();
+        value += values_to_aggregate[i].get_float();
+        values[i].set_float(value);
+      } else {
+        ASSERT(false, "not supported value type");
+      }
+    } else {
+      ASSERT(false, "not supported aggregate type");
+    }
+  }
+  return RC::SUCCESS;
+}
+
 RC StandardAggregateHashTable::add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk)
 {
   // your code here
-  exit(-1);
+  //volcano each record
+  vector<Value> group_record;
+  vector<Value> aggr_record;
+  for(int i=0;i<groups_chunk.rows();i++){
+    // get groups_chunk
+    for(int j=0;j<groups_chunk.column_num();j++){
+      group_record.push_back(groups_chunk.get_value(j,i));
+    }
+    // get aggrs_chunk
+    for(int j=0;j<aggrs_chunk.column_num();j++){
+      aggr_record.push_back(aggrs_chunk.get_value(j,i));
+    }
+    
+    // check if exist in hashtable
+    if(aggr_values_.find(group_record)==aggr_values_.end()){  // not exist
+      // create a sub_aggregate_chunk for the group
+      std::vector<Value> sub_agg_chunk(aggr_record.size());
+      // set the init state
+      for(int j=0;j < aggr_record.size();j++){
+        sub_agg_chunk[j].set_value(aggr_record[j]);
+      }
+      aggr_values_.insert(std::make_pair(group_record,sub_agg_chunk));
+    }
+    else{    // exist
+      sub_aggregate(aggr_values_.find(group_record)->second,aggr_record);
+    }
+
+    group_record.clear();
+    aggr_record.clear();
+  }
+
+  return RC::SUCCESS;
 }
 
 void StandardAggregateHashTable::Scanner::open_scan()
