@@ -90,6 +90,7 @@ public:
   virtual ~StandardAggregateHashTable() {}
 
   RC add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk) override;
+  int size() { return aggr_values_.size(); };
 
   StandardHashTable::iterator begin() { return aggr_values_.begin(); }
   StandardHashTable::iterator end() { return aggr_values_.end(); }
