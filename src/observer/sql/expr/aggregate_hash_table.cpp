@@ -268,7 +268,7 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
   int key,index;
   V value;
   bool flag=false;
-  int inv[];
+  int inv[len];
   memset(inv,0xff,sizeof(int)*len);
 
   for(int i=0;i<len;i++){   // 
