@@ -267,14 +267,14 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
   // your code here
   //exit(-1);
   int key,index;
-  bool flag=flase;
+  bool flag=false;
   int *inv;
   memset(inv,0xff,sizeof(int)*len);
 
-  for(int i=0;i<len;i++){   
+  for(int i=0;i<len;i++){   // 
     key=input_keys[i];
     index = (key % capacity_ + capacity_) % capacity_;
-    while(flag==flase){
+    while(flag==false){
       if(inv[i]==-1){
         input_values[i]=input_keys[i];
         inv[i]=0;
@@ -285,7 +285,6 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
       }
     }
   }
-
   // inv (invalid) 表示是否有效，inv[i] = -1 表示有效，inv[i] = 0 表示无效。
   // key[SIMD_WIDTH],value[SIMD_WIDTH] 表示当前循环中处理的键值对。
   // off (offset) 表示线性探测冲突时的偏移量，key[i] 每次遇到冲突键，则off[i]++，如果key[i] 已经完成聚合，则off[i] = 0，
