@@ -269,13 +269,13 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
   int index       = (input_keys[i] % capacity_ + capacity_) % capacity_;
   int iterate_cnt = 0;
   while (true) {
-    if (input_keys[i]s_[index] == EMPTY_input_keys[i]) {
+    if (keys_[index] == EMPTY_KEY) {
       size_++;
-      input_keys[i]s_[index] = input_keys[i];
-      input_values[i]s_[index] = input_values[i];
+      keys_[index] = input_keys[i];
+      values_[index] = input_values[i];
       break;
-    } else if (input_keys[i]s_[index] == input_keys[i]) {
-      aggregate(&input_values[i]s_[index], input_values[i]);
+    } else if (keys_[index] == input_keys[i]) {
+      aggregate(&values_[index], input_values[i]);
       break;
     } else {
       index += 1;
@@ -285,8 +285,10 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
         break;
       }
     }
+    }
   }
-}
+
+         
 }
 
 template <typename V>
