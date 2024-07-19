@@ -90,6 +90,7 @@ public:
   virtual ~StandardAggregateHashTable() {}
 
   RC add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk) override;
+  RC sub_aggregate(std::vector<Value> &values, std::vector<Value> &values_to_aggregate);
 
   StandardHashTable::iterator begin() { return aggr_values_.begin(); }
   StandardHashTable::iterator end() { return aggr_values_.end(); }
