@@ -28,7 +28,7 @@ AggregateVecPhysicalOperator::AggregateVecPhysicalOperator(vector<Expression *> 
     Expression *child_expr     = aggregate_expr->child().get();
     ASSERT(child_expr != nullptr, "aggregation expression must have a child expression");
     value_expressions_.emplace_back(child_expr);
-  };
+  }
 
   for (size_t i = 0; i < aggregate_expressions_.size(); i++) {
     auto &expr = aggregate_expressions_[i];
@@ -88,7 +88,7 @@ RC AggregateVecPhysicalOperator::open(Trx *trx)
   if (rc == RC::RECORD_EOF) {
     rc = RC::SUCCESS;
   }
-
+  ended_ = false;
   return rc;
 }
 template <class STATE, typename T>
@@ -128,13 +128,14 @@ for (size_t aggr_idx = 0; aggr_idx < aggregate_expressions_.size(); aggr_idx++) 
   }
 }
 ended_ = true;
-// return RC::SUCCESS;
+return RC::SUCCESS;
 return rc;
 }
 
 RC AggregateVecPhysicalOperator::close()
 {
   children_[0]->close();
+  ended_=false;
   LOG_INFO("close group by operator");
   return RC::SUCCESS;
 }
