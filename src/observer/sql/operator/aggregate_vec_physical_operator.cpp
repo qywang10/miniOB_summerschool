@@ -23,12 +23,12 @@ AggregateVecPhysicalOperator::AggregateVecPhysicalOperator(vector<Expression *> 
   aggregate_expressions_ = std::move(expressions);
   value_expressions_.reserve(aggregate_expressions_.size());
 
-  ranges::for_each(aggregate_expressions_, [this](Expression *expr) {
+  for(auto expr : aggregate_expressions_) {
     auto *      aggregate_expr = static_cast<AggregateExpr *>(expr);
     Expression *child_expr     = aggregate_expr->child().get();
     ASSERT(child_expr != nullptr, "aggregation expression must have a child expression");
     value_expressions_.emplace_back(child_expr);
-  });
+  };
 
   for (size_t i = 0; i < aggregate_expressions_.size(); i++) {
     auto &expr = aggregate_expressions_[i];
@@ -126,14 +126,9 @@ for (size_t aggr_idx = 0; aggr_idx < aggregate_expressions_.size(); aggr_idx++) 
     }
   }
 }
-if(rc == RC::SUCCESS) {
-  ended_ = true;
-  return RC::SUCCESS;
-}
-  return rc;
+ended_ = true;
+// return RC::SUCCESS;
 return rc;
-// your code here
-  //exit(-1);
 }
 
 RC AggregateVecPhysicalOperator::close()
