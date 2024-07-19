@@ -127,8 +127,10 @@ for (size_t aggr_idx = 0; aggr_idx < aggregate_expressions_.size(); aggr_idx++) 
     }
   }
 }
-ended_ = true;
-return RC::SUCCESS;
+if(rc == RC::SUCCESS) {
+  ended_ = true;
+  return RC::SUCCESS;
+}
 return rc;
 }
 

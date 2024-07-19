@@ -75,12 +75,12 @@ public:
     if (rc == RC::RECORD_EOF) {
       rc = RC::SUCCESS;
     }
-    emited_  = false;
+    ended_  = false;
     return rc;
   }
 
   RC next(Chunk &chunk) override {
-    if(emited_) {
+    if(ended_) {
       return RC::RECORD_EOF;
     }
 
@@ -103,7 +103,7 @@ public:
     while(OB_SUCC(sc.next(chunk))) {
 
     }
-    emited_ = true;
+    ended_ = true;
     return RC::SUCCESS;
   }
 
@@ -117,7 +117,7 @@ private:
   std::vector<Expression *> aggregate_expressions_;  /// 聚合表达式
   std::vector<Expression *> value_expressions_;      /// 计算聚合时的表达式
   std::vector<std::unique_ptr<Expression>> group_by_exprs_;
-  bool emited_ = false;
+  bool ended_ = false;
   Chunk chunk_;
   StandardAggregateHashTable ht_;
 };

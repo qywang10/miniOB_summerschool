@@ -11,6 +11,7 @@ See the Mulan PSL v2 for more details. */
 #include <vector>
 #include <iostream>
 #include <unordered_map>
+#include <string.h>
 
 #include "common/math/simd_util.h"
 #include "common/rc.h"
@@ -158,6 +159,24 @@ private:
   void resize();
 
   void resize_if_need();
+
+  int hash_function(int key) {
+    return (key % capacity_ + capacity_) % capacity_;
+  }
+
+    inline __m256i insert_value(__m256i keys, int value, int pos) {
+    switch (pos) {
+        case 0: return _mm256_insert_epi32(keys, value, 0);
+        case 1: return _mm256_insert_epi32(keys, value, 1);
+        case 2: return _mm256_insert_epi32(keys, value, 2);
+        case 3: return _mm256_insert_epi32(keys, value, 3);
+        case 4: return _mm256_insert_epi32(keys, value, 4);
+        case 5: return _mm256_insert_epi32(keys, value, 5);
+        case 6: return _mm256_insert_epi32(keys, value, 6);
+        case 7: return _mm256_insert_epi32(keys, value, 7);
+        default: return keys; // No insertion if pos is out of range
+    }
+}
 
 private:
   static const int EMPTY_KEY;
