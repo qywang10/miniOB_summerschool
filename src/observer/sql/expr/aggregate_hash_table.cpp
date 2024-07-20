@@ -265,10 +265,10 @@ template <typename V>
 void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_values, int len)
 {
   // your code here
-int key,index;
-V value;
-int num=0;
 for (int i = 0; i < len; i++) {
+  int key,index;
+  V value;
+  int num=0;
   key=input_keys[i];
   value=input_values[i];
   index = (key % capacity_ + capacity_) % capacity_;
@@ -292,9 +292,9 @@ for (int i = 0; i < len; i++) {
               break;
           }
       }
-   }
-         
   }
+}
+resize_if_need();
 //  resize_if_need();    
 }
 
