@@ -271,14 +271,13 @@ int num=0;
 for (int i = 0; i < len; i++) {
   key=input_keys[i];
   value=input_values[i];
-  index v = (key % capacity_ + capacity_) % capacity_;
+  index = (key % capacity_ + capacity_) % capacity_;
   
   while(true){
-      if(key_[index]==EMPTY_KEY){
+      if(keys_[index]==EMPTY_KEY){
           size_++;
           keys_[index]=key;
           values_[index]=value;
-          num++;
           break;
       }  
       else if(keys_[index]==key){
@@ -296,7 +295,7 @@ for (int i = 0; i < len; i++) {
    }
          
   }
-         
+  resize_if_need();    
 }
 
 template <typename V>
