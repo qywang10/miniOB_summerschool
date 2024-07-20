@@ -530,9 +530,6 @@ expression:
     | '*' {
       $$ = new StarExpr();
     }
-    | SUM LBRACE expression RBRACE{
-        $$ = new UnboundAggregateExpr("SUM", $3);
-    }
     // your code here
     ;
 
@@ -665,11 +662,6 @@ group_by:
     {
       $$ = nullptr;
     }
-    | GROUP BY expression_list
-        {
-          $$ = $3;
-        }
-
     ;
 load_data_stmt:
     LOAD DATA INFILE SSS INTO TABLE ID 
