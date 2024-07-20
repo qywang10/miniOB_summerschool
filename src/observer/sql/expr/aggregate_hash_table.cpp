@@ -12,33 +12,62 @@ See the Mulan PSL v2 for more details. */
 
 // ----------------------------------StandardAggregateHashTable------------------
 
-RC StandardAggregateHashTable::add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk)
+RC StandardAggregateHashTable::sub_aggregate(std::vector<Value> &values, std::vector<Value> &values_to_aggregate)
 {
-  for(int i = 0;i < groups_chunk.rows();i ++) {
-    std::vector<Value> group_vals, aggrs_vals;
-    for(int j = 0;j < groups_chunk.column_num();j ++) {
-      group_vals.push_back(groups_chunk.get_value(j, i));
-    }
-    for(int j = 0;j < aggrs_chunk.column_num();j ++) {
-      aggrs_vals.push_back(aggrs_chunk.get_value(j, i));
-    }
-
-    // do aggregation
-    if(aggr_values_.count(group_vals) != 0) {
-      // aggregate the aggrs_vals here
-      for (size_t aggr_idx = 0; aggr_idx < aggrs_chunk.column_num(); aggr_idx++) {
-        if(aggr_values_[group_vals].at(aggr_idx).attr_type() == AttrType::INTS) {
-          int old_val = aggr_values_[group_vals].at(aggr_idx).get_int();
-          aggr_values_[group_vals].at(aggr_idx).set_int(aggrs_vals[aggr_idx].get_int() + old_val);
-        } else if(aggr_values_[group_vals].at(aggr_idx).attr_type() == AttrType::FLOATS) {
-          float old_val = aggr_values_[group_vals].at(aggr_idx).get_float();
-          aggr_values_[group_vals].at(aggr_idx).set_float(aggrs_vals[aggr_idx].get_float() + old_val);
-        }
+  for (size_t i = 0; i < values.size(); i++) {
+    if (aggr_types_[i] == AggregateExpr::Type::SUM) {
+      if (values[i].attr_type() == AttrType::INTS) {
+        int value = values[i].get_int();
+        value += values_to_aggregate[i].get_int();
+        values[i].set_int(value);
+      } else if (values[i].attr_type() == AttrType::FLOATS) {
+        float value = values[i].get_float();
+        value += values_to_aggregate[i].get_float();
+        values[i].set_float(value);
+      } else {
+        ASSERT(false, "not supported value type");
       }
     } else {
-      aggr_values_[group_vals] = aggrs_vals;
+      ASSERT(false, "not supported aggregate type");
     }
   }
+  return RC::SUCCESS;
+}
+
+RC StandardAggregateHashTable::add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk)
+{
+  // your code here
+  //volcano each record
+  vector<Value> group_record;
+  vector<Value> aggr_record;
+  for(int i=0;i<groups_chunk.rows();i++){
+    // get groups_chunk
+    for(int j=0;j<groups_chunk.column_num();j++){
+      group_record.push_back(groups_chunk.get_value(j,i));
+    }
+    // get aggrs_chunk
+    for(int j=0;j<aggrs_chunk.column_num();j++){
+      aggr_record.push_back(aggrs_chunk.get_value(j,i));
+    }
+    
+    // check if exist in hashtable
+    if(aggr_values_.find(group_record)==aggr_values_.end()){  // not exist
+      // create a sub_aggregate_chunk for the group
+      std::vector<Value> sub_agg_chunk(aggr_record.size());
+      // set the init state
+      for(int j=0;j < aggr_record.size();j++){
+        sub_agg_chunk[j].set_value(aggr_record[j]);
+      }
+      aggr_values_.insert(std::make_pair(group_record,sub_agg_chunk));
+    }
+    else{    // exist
+      sub_aggregate(aggr_values_.find(group_record)->second,aggr_record);
+    }
+
+    group_record.clear();
+    aggr_record.clear();
+  }
+
   return RC::SUCCESS;
 }
 
@@ -236,138 +265,37 @@ template <typename V>
 void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_values, int len)
 {
   // your code here
-  exit(-1);
-
-  // inv (invalid) 表示是否有效，inv[i] = -1 表示有效，inv[i] = 0 表示无效。
-  // key[SIMD_WIDTH],value[SIMD_WIDTH] 表示当前循环中处理的键值对。
-  // off (offset) 表示线性探测冲突时的偏移量，key[i] 每次遇到冲突键，则off[i]++，如果key[i] 已经完成聚合，则off[i] = 0，
-  // i = 0 表示selective load 的起始位置。
-  // inv 全部初始化为 -1
-  // off 全部初始化为 0
-
-  // for (; i + SIMD_WIDTH <= len;) {
-    // 1: 根据 `inv` 变量的值，从 `input_keys` 中 `selective load` `SIMD_WIDTH` 个不同的输入键值对。
-    // 2. 计算 i += |inv|, `|inv|` 表示 `inv` 中有效的个数 
-    // 3. 计算 hash 值，
-    // 4. 根据聚合类型（目前只支持 sum），在哈希表中更新聚合结果。如果本次循环，没有找到key[i] 在哈希表中的位置，则不更新聚合结果。
-    // 5. gather 操作，根据 hash 值将 keys_ 的 gather 结果写入 table_key 中。
-    // 6. 更新 inv 和 off。如果本次循环key[i] 聚合完成，则inv[i]=-1，表示该位置在下次循环中读取新的键值对。
-    // 如果本次循环 key[i] 未在哈希表中聚合完成（table_key[i] != key[i]），则inv[i] = 0，表示该位置在下次循环中不需要读取新的键值对。
-    // 如果本次循环中，key[i]聚合完成，则off[i] 更新为 0，表示线性探测偏移量为 0，key[i] 未完成聚合，则off[i]++,表示线性探测偏移量加 1。
-  // }
-  //7. 通过标量线性探测，处理剩余键值对
-
-  int inv[SIMD_WIDTH];
-  int off[SIMD_WIDTH];
-  memset(inv, -1, sizeof(inv)); // Initialize inv to -1
-  memset(off, 0, sizeof(off));  // Initialize off to 0
-
-  std::cout << "cap " << capacity_ << std::endl;
-
-  int i = 0;
-  __m256i keys = _mm256_setzero_si256();
-  __m256i values = _mm256_setzero_si256();
-  __m256i hash_vals = _mm256_setzero_si256();
-  __m256i table_keys;
-
-  while (i + SIMD_WIDTH <= len) {
-      for (int j = 0; j < SIMD_WIDTH; ++j) {
-          if (inv[j] == -1 && i < len) {
-              std::cout << "insert pos " << j << " key: " << input_keys[i] << std::endl;
-              keys = insert_value(keys, input_keys[i], j);
-              values = insert_value(values, input_values[i], j);
-              inv[j] = 0;
-              ++i;
-          }
-      }
-
-      // Calculate hash values
-
-      for (int j = 0; j < SIMD_WIDTH; ++j) {
-        if(inv[j] != -1) {
-          int key = mm256_extract_epi32_var_indx(keys, j);
-          int hash_val = hash_function(key + off[j]);
-          std::cout << "cal hash vals, pos: " << j << " key: " << key << " hash val: " << hash_val << std::endl;
-          hash_vals = insert_value(hash_vals, hash_val, j);
-        }
-      }
-
-      // aggregate
-      for (int j = 0; j < SIMD_WIDTH; ++j) {
-          if(inv[j] == -1) continue;
-          int key = mm256_extract_epi32_var_indx(keys, j);
-          int hash_val = hash_function(key + off[j]);
-
-          if (keys_[hash_val] == key) {
-              values_[hash_val] += mm256_extract_epi32_var_indx(values, j);
-              inv[j] = -1; // Mark as done
-              off[j] = 0;
-          }
-      }
-
-      // Gather operation
-      table_keys = _mm256_i32gather_epi32(keys_.data(), hash_vals, 4);
-
-      for (int j = 0; j < SIMD_WIDTH; ++j) {
-          if(inv[j] == -1) continue;
-          int key = mm256_extract_epi32_var_indx(keys, j);
-          int table_key = mm256_extract_epi32_var_indx(table_keys, j);
-          int hash_val = mm256_extract_epi32_var_indx(hash_vals, j);
-
-          if(table_key == EMPTY_KEY) {
-              if(keys_[hash_val] != EMPTY_KEY && keys_[hash_val] != key) {
-                off[j]++;
-              } else if(keys_[hash_val] != EMPTY_KEY && keys_[hash_val] == key) {
-                values_[hash_val] += mm256_extract_epi32_var_indx(values, j);
-                inv[j] = -1; // Mark as done
-                off[j] = 0;
-              } else {
-                // std::cout << "key " << key << "insert into empty " << hash_val << std::endl;
-                keys_[hash_val] = key;
-                values_[hash_val] = mm256_extract_epi32_var_indx(values, j);
-                inv[j] = -1; // Mark as done
-                off[j] = 0;
-                size_++;
-              }
-          } else {
-              off[j]++;
-          }
-      }
-  }
-
-  for (int j = 0; j < SIMD_WIDTH; ++j) {
-      if(inv[j] == -1) continue;
-      int key = mm256_extract_epi32_var_indx(keys, j);
-      int hash_val = hash_function(key + off[j]);
-
-      if (keys_[hash_val] == key) {
-          values_[hash_val] += mm256_extract_epi32_var_indx(values, j);
-          inv[j] = -1; // Mark as done
-          off[j] = 0;
-      }
-  }
-
-  // Process remaining elements
-  while (i < len) {
-      int key = input_keys[i];
-      V value = input_values[i];
-      int hash_val = hash_function(key);
-
-      while (keys_[hash_val] != key && keys_[hash_val] != EMPTY_KEY) {
-          hash_val = (hash_val + 1) % capacity_;
-      }
-
-      if (keys_[hash_val] == key) {
-          values_[hash_val] += value;
-      } else {
-          keys_[hash_val] = key;
-          values_[hash_val] = value;
+for (int i = 0; i < len; i++) {
+  int key,index;
+  V value;
+  int num=0;
+  key=input_keys[i];
+  value=input_values[i];
+  index = (key % capacity_ + capacity_) % capacity_;
+  
+  while(true){
+      if(keys_[index]==EMPTY_KEY){
           size_++;
+          keys_[index]=key;
+          values_[index]=value;
+          break;
+      }  
+      else if(keys_[index]==key){
+          aggregate(&values_[index], value);
+          break;
       }
-      ++i;
+      else{
+          index += 1;
+          index %= capacity_;
+          num++;
+          if(num>capacity_){
+              break;
+          }
+      }
   }
-
-  resize_if_need();
+}
+resize_if_need();
+//  resize_if_need();    
 }
 
 template <typename V>
