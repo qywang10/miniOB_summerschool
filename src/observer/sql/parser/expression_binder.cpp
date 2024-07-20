@@ -420,6 +420,16 @@ RC ExpressionBinder::bind_aggregate_expression(
   unique_ptr<Expression>        &child_expr = unbound_aggregate_expr->child();
   vector<unique_ptr<Expression>> child_bound_expressions;
 
+  // corner cases:
+  // 1. child_expr is nullptr
+  if(child_expr->name() == nullptr) {
+    return RC::INVALID_ARGUMENT;
+  }
+  // 2. SUM(*) ...
+  if (child_expr->type() == ExprType::STAR && aggregate_type != AggregateExpr::Type::COUNT) {
+    return RC::INVALID_ARGUMENT;
+  }   
+
   if (child_expr->type() == ExprType::STAR && aggregate_type == AggregateExpr::Type::COUNT) {
     ValueExpr *value_expr = new ValueExpr(Value(1));
     child_expr.reset(value_expr);
@@ -429,6 +439,8 @@ RC ExpressionBinder::bind_aggregate_expression(
       return rc;
     }
 
+    // 3. ERROR WITH REDUNDANT COLUMNS
+    // fixed below...
     if (child_bound_expressions.size() != 1) {
       LOG_WARN("invalid children number of aggregate expression: %d", child_bound_expressions.size());
       return RC::INVALID_ARGUMENT;

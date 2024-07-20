@@ -129,6 +129,7 @@ ComparisonExpr::~ComparisonExpr() {}
 RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
 {
   RC  rc         = RC::SUCCESS;
+
   int cmp_result = left.compare(right);
   result         = false;
   switch (comp_) {

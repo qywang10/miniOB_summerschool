@@ -20,7 +20,6 @@ RC StandardAggregateHashTable::add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk
       group_vals.push_back(groups_chunk.get_value(j, i));
     }
     for(int j = 0;j < aggrs_chunk.column_num();j ++) {
-      // std::cout << aggrs_chunk.column_num() << " " << aggrs_chunk.rows() << " " << j << " " << i << std::endl;
       aggrs_vals.push_back(aggrs_chunk.get_value(j, i));
     }
 
@@ -30,11 +29,9 @@ RC StandardAggregateHashTable::add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk
       for (size_t aggr_idx = 0; aggr_idx < aggrs_chunk.column_num(); aggr_idx++) {
         if(aggr_values_[group_vals].at(aggr_idx).attr_type() == AttrType::INTS) {
           int old_val = aggr_values_[group_vals].at(aggr_idx).get_int();
-          // std::cout << "old val: " << old_val << " " << aggrs_vals[aggr_idx].get_float() << std::endl;
           aggr_values_[group_vals].at(aggr_idx).set_int(aggrs_vals[aggr_idx].get_int() + old_val);
         } else if(aggr_values_[group_vals].at(aggr_idx).attr_type() == AttrType::FLOATS) {
           float old_val = aggr_values_[group_vals].at(aggr_idx).get_float();
-          // std::cout << "old val: " << old_val << " " << aggrs_vals[aggr_idx].get_float() << std::endl;
           aggr_values_[group_vals].at(aggr_idx).set_float(aggrs_vals[aggr_idx].get_float() + old_val);
         }
       }
